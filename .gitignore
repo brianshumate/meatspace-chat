@@ -1,4 +1,5 @@
 .DS_Store
+.tm_properties
 db
 node_modules
 clients.json
@@ -9,3 +10,4 @@ public/javascripts/build
 blacklist.json
 logger
 public/javascripts/lib
+npm-debug.log
