@@ -2,7 +2,7 @@
    v2.0 | 20110126
    License: none (public domain)
 */
-
+  
 html, body, div, span, applet, object, iframe,
 h1, h2, h3, h4, h5, h6, p, blockquote, pre,
 a, abbr, acronym, address, big, cite, code,
@@ -454,17 +454,12 @@ input::-webkit-input-placeholder {
     text-transform: uppercase;
 }
 
-<<<<<<< HEAD
-#chat-container li .mute:hover {
-    background-color: #21a7e1;
-=======
 #chat-container li .ban {
     bottom: 30px;
 }
 
 #chat-container li .mute:hover, #chat-container li .ban:hover {
-    background-color: #e22661;
->>>>>>> 6c5be241efb979f20ef2b110beaf06a5d116352b
+    background-color: #21a7e1;
     color: #eee;
 }
 
