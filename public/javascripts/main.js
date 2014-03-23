@@ -13,7 +13,8 @@ define(['jquery', './base/transform', 'gumhelper', './base/videoShooter', 'finge
 
   var auth = {
     userid: null,
-    fingerprint: new Fingerprint({ canvas: true }).get()
+    fingerprint: new Fingerprint({ canvas: true }).get(),
+    admin: false
   };
   var chat = {
     container: $('#chat-container'),
@@ -39,6 +40,7 @@ define(['jquery', './base/transform', 'gumhelper', './base/videoShooter', 'finge
   var isPosting = false;
   var canSend = true;
   var muteText = body.data('mute');
+  var banText = body.data('ban');
   var mutes = JSON.parse(localStorage.getItem('muted')) || [];
   var favicon = new Favico({
     animation: 'none',
@@ -77,8 +79,11 @@ define(['jquery', './base/transform', 'gumhelper', './base/videoShooter', 'finge
     }
   };
 
-  var isMuted = function (fingerprint) {
-    return mutes.indexOf(fingerprint) !== -1;
+  var isMuted = function (fingerprint, incoming) {
+    var mutedItem = mutes.indexOf(fingerprint) !== -1;
+    var bannedItem = incoming.value.banned && auth.userid !== fingerprint;
+
+    return !!(mutedItem || bannedItem);
   };
 
   var debug = function () {
@@ -112,12 +117,15 @@ define(['jquery', './base/transform', 'gumhelper', './base/videoShooter', 'finge
 
     var fingerprint = incoming.value.fingerprint;
 
-    if (!isMuted(fingerprint)) {
+    if (!isMuted(fingerprint, incoming)) {
       var img = new Image();
       var onComplete = function () {
         // Don't want duplicates and don't want muted messages
-        if (body.find('li[data-key="' + incoming.key + '"]').length === 0 &&
-            !isMuted(fingerprint)) {
+        if (body.find('li[data-key="' + incoming.key + '"]').length === 0) {
+
+          if (window.ga) {
+            window.ga('send', 'event', 'message', 'receive');
+          }
 
           var li = document.createElement('li');
           li.dataset.key = incoming.key;
@@ -132,6 +140,13 @@ define(['jquery', './base/transform', 'gumhelper', './base/videoShooter', 'finge
             button.textContent = muteText;
             button.className = 'mute';
             li.appendChild(button);
+
+            if (auth.admin) {
+              var banButton = document.createElement('button');
+              banButton.textContent = banText;
+              banButton.className = 'ban';
+              li.appendChild(banButton);
+            }
           }
 
           var message = document.createElement('p');
@@ -225,6 +240,7 @@ define(['jquery', './base/transform', 'gumhelper', './base/videoShooter', 'finge
 
   $.get('/ip?t=' + Date.now(), function (data) {
     auth.userid = md5(auth.fingerprint + data.ip);
+    auth.admin = data.admin;
   });
 
   if (navigator.getMedia) {
@@ -328,6 +344,13 @@ define(['jquery', './base/transform', 'gumhelper', './base/videoShooter', 'finge
     }
   });
 
+  chat.list.on('click', '.ban', function (ev) {
+    $.post('/hellban', {
+      fingerprint: $(this).parent().data('fingerprint'),
+      _csrf: composer.form.find('input[name="_csrf"]').val()
+    });
+  });
+
   composer.form.on('keyup', function (ev) {
     counter.text(CHAR_LIMIT - composer.message.val().length);
   }).on('submit', function (ev) {
@@ -363,7 +386,9 @@ define(['jquery', './base/transform', 'gumhelper', './base/videoShooter', 'finge
 
           debug('Sending chat');
           $.post('/add/chat', $.extend(submission, auth), function () {
-            // nothing to see here?
+            if (window.ga) {
+              window.ga('send', 'event', 'message', 'send');
+            }
           }).error(function (data) {
             alert(data.responseJSON.error);
           }).always(function (data) {

@@ -437,7 +437,7 @@ input::-webkit-input-placeholder {
     text-overflow: ellipsis;
 }
 
-#chat-container li .mute {
+#chat-container li .mute, #chat-container li .ban {
     font-family: "Helvetica Neue", "Helvetica", "Arial", sans-serif;
     background: none;
     border: 0;
@@ -454,8 +454,17 @@ input::-webkit-input-placeholder {
     text-transform: uppercase;
 }
 
+<<<<<<< HEAD
 #chat-container li .mute:hover {
     background-color: #21a7e1;
+=======
+#chat-container li .ban {
+    bottom: 30px;
+}
+
+#chat-container li .mute:hover, #chat-container li .ban:hover {
+    background-color: #e22661;
+>>>>>>> 6c5be241efb979f20ef2b110beaf06a5d116352b
     color: #eee;
 }
 

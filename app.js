@@ -37,6 +37,17 @@ passport.use(new TwitterStrategy({
   }
 ));
 
+var isLoggedIn = function (req, res, next) {
+  if (req.session.authenticated) {
+    next();
+  } else {
+    res.status(403);
+    res.json({
+      error: 'You need to be authenticated'
+    });
+  }
+};
+
 // set up meatcounter publisher and connect
 // to endpoints
 var meatcounter_addrs = nconf.get('meatcounter_addrs');
@@ -53,11 +64,10 @@ var io = require('socket.io').listen(server);
 
 io.configure(function () {
   io.set('transports', ['websocket']);
-  io.set('polling duration', 10);
   io.set('log level', 1);
 });
 
 // routes
-require('./routes')(app, nconf, io, zio, topic_in, topic_out, passport);
+require('./routes')(app, nconf, io, zio, topic_in, topic_out, passport, isLoggedIn);
 
 server.listen(process.env.PORT || nconf.get('port'));

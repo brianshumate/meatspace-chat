@@ -23,7 +23,12 @@
   "info!": "Info!",
   "unmute": "Quitar silencio",
   "mute": "Silenciar",
+<<<<<<< HEAD
   "termsAndConditions": "Please read and accept the Terms and Conditions before continuing with Robospace chat.",
+=======
+  "ban": "Ban",
+  "termsAndConditions": "Please read and accept the Terms and Conditions before continuing with Meatspace chat.",
+>>>>>>> 6c5be241efb979f20ef2b110beaf06a5d116352b
   "iAccept": "I accept",
   "iDoNotAccept": "I do not accept",
   "termsLink": "Terms and Conditions"

@@ -1,11 +1,17 @@
 'use strict';
 
-module.exports = function (app, nconf, io, zio, topic_in, topic_out, passport) {
+module.exports = function (app, nconf, io, zio, topic_in, topic_out, passport, isLoggedIn) {
   var crypto = require('crypto');
   var Publico = require('meatspace-publico');
   var nativeClients = require('../clients.json');
   var whitelist = require('../whitelist.json');
   var level = require('level');
+  var redis = require('redis');
+  var client = redis.createClient();
+
+  var getUserId = function(fingerprint, ip) {
+    return crypto.createHash('md5').update(fingerprint + ip).digest('hex');
+  };
 
   var publico = new Publico('none', {
     db: './db',
@@ -26,9 +32,25 @@ module.exports = function (app, nconf, io, zio, topic_in, topic_out, passport) {
   };
 
   var emitChat = function (socket, chat, zio, topic_out) {
-    var statmsg = JSON.stringify({ epoch_ms: Date.now(), fingerprint: chat.value.fingerprint });
-    zio.send([topic_out, statmsg]);
-    socket.emit('message', { chat: chat });
+    var fingerprint = chat.value.fingerprint;
+
+    client.scard('bans:' + fingerprint, function (err, result) {
+      if (!err) {
+        if (result > 2) {
+          console.log('banned! ', fingerprint);
+          chat.value.banned = true;
+        }
+      }
+
+      var statmsg = JSON.stringify({
+        epoch_ms: Date.now(),
+        fingerprint: fingerprint
+      });
+
+      zio.send([topic_out, statmsg]);
+
+      socket.emit('message', { chat: chat });
+    });
   };
 
   app.get('/auth/twitter', passport.authenticate('twitter'), function (req, res) { });
@@ -63,15 +85,27 @@ module.exports = function (app, nconf, io, zio, topic_in, topic_out, passport) {
     res.render('index');
   });
 
+  app.post('/hellban', isLoggedIn, function (req, res) {
+    var ban = 'bans:' + req.body.fingerprint;
+    var adminId = req.session.passport.user.id;
+
+    client.sadd(ban, adminId);
+    client.expire(ban, nconf.get('ban_ttl'));
+    res.json({});
+  });
+
   // NOTE: This is now a deprecated API method -- All chats go out through web sockets
   app.get('/get/chats', function (req, res) {
     res.status(410);
-    res.json({ error: 'This method is now deprecated. All chat messages, including initial ones, are now emitted through web socket messages.' });
+    res.json({
+      error: 'This method is now deprecated. All chat messages, including initial ones, are now emitted through web socket messages.'
+    });
   });
 
   app.get('/ip', function (req, res) {
     res.json({
-      ip: req.ip
+      ip: req.ip,
+      admin: req.session.authenticated || false
     });
   });
 
@@ -89,7 +123,11 @@ module.exports = function (app, nconf, io, zio, topic_in, topic_out, passport) {
         next(err);
       } else {
         try {
-          var statmsg = JSON.stringify( { epoch_ms: Date.now(), fingerprint: fingerprint } );
+          var statmsg = JSON.stringify({
+            epoch_ms: Date.now(),
+            fingerprint: fingerprint
+          });
+
           zio.send([topic_in, statmsg]);
           emitChat(io.sockets, { key: c.key, value: c }, zio, topic_out);
           next(null, 'sent!');
@@ -98,10 +136,6 @@ module.exports = function (app, nconf, io, zio, topic_in, topic_out, passport) {
         }
       }
     });
-  };
-
-  var getUserId = function(fingerprint, ip) {
-    return crypto.createHash('md5').update(fingerprint + ip).digest('hex');
   };
 
   app.post('/add/chat', function (req, res, next) {
@@ -123,6 +157,7 @@ module.exports = function (app, nconf, io, zio, topic_in, topic_out, passport) {
             res.status(400);
             res.json({ error: err.toString() });
           } else {
+            client.set('fingerprint:' + req.body.fingerprint, userId);
             res.json({ status: status });
           }
         });
