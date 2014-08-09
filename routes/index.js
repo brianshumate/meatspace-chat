@@ -113,7 +113,7 @@ module.exports = function (app, nconf, io, zio, topic_in, topic_out, passport, i
     res.render('terms');
   });
 
-  var addChat = function (message, picture, fingerprint, userId, ip, next) {
+  var addChat = function (message, picture, userId, ip, next) {
     publico.addChat(message.slice(0, 250), {
       ttl: nconf.get('ttl') || 600000,
       media: picture,
@@ -125,7 +125,7 @@ module.exports = function (app, nconf, io, zio, topic_in, topic_out, passport, i
         try {
           var statmsg = JSON.stringify({
             epoch_ms: Date.now(),
-            fingerprint: fingerprint
+            fingerprint: userId
           });
 
           zio.send([topic_in, statmsg]);
@@ -149,22 +149,25 @@ module.exports = function (app, nconf, io, zio, topic_in, topic_out, passport, i
 
     var ip = req.ip;
     var userId = getUserId(req.body.fingerprint, ip);
+    var picture = req.body.picture;
 
-    if (req.body.picture) {
-      if ((userId === req.body.userid) || req.isApiUser) {
-        addChat(req.body.message, req.body.picture, req.body.fingerprint, userId, ip, function (err, status) {
-          if (err) {
-            res.status(400);
-            res.json({ error: err.toString() });
-          } else {
-            client.set('fingerprint:' + req.body.fingerprint, userId);
-            res.json({ status: status });
-          }
-        });
-      } else {
-        res.status(403);
-        res.json({ error: 'invalid fingerprint' });
+    if (picture) {
+      if (picture.indexOf('data:image/') !== 0) {
+        res.status(400);
+        res.json({ error: 'Invalid image type' });
+        return;
       }
+      req.body.message = req.body.message.replace(/[\r\n\t]/g, '');
+
+      addChat(req.body.message, picture, userId, ip, function (err, status) {
+        if (err) {
+          res.status(400);
+          res.json({ error: err.toString() });
+        } else {
+          client.set('fingerprint:' + req.body.fingerprint, userId);
+          res.json({ status: status, fingerprint: userId });
+        }
+      });
     } else {
       res.status(400);
       res.json({ error: 'you need webrtc' });
@@ -199,7 +202,7 @@ module.exports = function (app, nconf, io, zio, topic_in, topic_out, passport, i
     socket.on('message', function (data) {
       if (nativeClients.indexOf(data.apiKey) > -1) {
         var userId = getUserId(data.fingerprint, ip);
-        addChat(data.message, data.picture, data.fingerprint, userId, ip, function (err) {
+        addChat(data.message, data.picture, userId, ip, function (err) {
           if (err) {
             console.log('error posting ', err.toString());
           }

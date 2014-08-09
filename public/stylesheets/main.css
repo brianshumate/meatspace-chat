@@ -21,8 +21,10 @@ time, mark, audio, video {
     border: 0;
     font-size: 100%;
     font: inherit;
+    font-family: inherit;
     vertical-align: baseline;
 }
+
 /* HTML5 display-role reset for older browsers */
 article, aside, details, figcaption, figure,
 footer, header, hgroup, menu, nav, section {
@@ -50,6 +52,14 @@ html, body {
     position: relative;
 }
 
+body, .input, #composer-blocker {
+    font-family: "Helvetica Neue", "Helvetica", "Arial", sans-serif;
+    font-weight: 300;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
 body {
     background-color: #eee;
 }
@@ -65,7 +75,6 @@ body.info {
     bottom: 10px;
     color: #555;
     display: none;
-    font-family: "Helvetica Neue", "Helvetica", "Arial", sans-serif;
     font-size: 1.5rem;
     left: 10px;
     padding: 30px;
@@ -76,17 +85,17 @@ body.info {
     z-index: 3;
 }
 
-#terms.on {
+#terms.on, #browser-warning.on {
     display: block;
 }
 
-#terms p {
+#terms p, #browser-warning p {
     margin: 20px auto;
     max-width: 500px;
     min-width: 250px;
 }
 
-#terms a {
+#terms a, #browser-warning a {
     color: #21a7e1;
     text-decoration: none;
 }
@@ -99,8 +108,42 @@ body.info {
     float: right;
 }
 
-#terms a:hover {
+#terms a:hover, #browser-warning a:hover {
     text-decoration: underline;
+}
+
+#browser-warning {
+  background-color: rgba(255, 255, 255, 0.95);
+  font-size: 1.5rem;
+  display: none;
+  border: 1px solid #e22661;
+  padding: 20px;
+  position: fixed;
+  top: 60px;
+  left: 20%;
+  right: 20%;
+  overflow: scroll;
+  text-align: center;
+  min-width: 300px;
+}
+
+#browser-warning p.subtext{
+  font-size: 1.1rem;
+}
+
+#browser-warning a.browser {
+  width: 64px;
+  height: 64px;
+  display: inline-block;
+}
+
+#browser-warning a.firefox {
+  background: url('../images/firefox-64.png') center no-repeat;
+}
+
+#browser-warning a.chrome {
+  margin-left: 10px;
+  background: url('../images/chrome-64.png') center no-repeat;
 }
 
 .terms {
@@ -183,8 +226,8 @@ body > img {
 .auth {
     color: #51c2f3;
     display: inline-block;
-    font-size: 0.8rem;
-    margin-top: 15px;
+    font-size: 1.2rem;
+    line-height: 51px;
 }
 
 #menu-button {
@@ -307,12 +350,6 @@ a.medium {
     margin: 0;
 }
 
-#wrapper {
-    margin: 0 auto;
-    position: relative;
-    font-family: "Helvetica Neue", "Helvetica", "Arial", sans-serif;
-}
-
 .header {
     background-color: #fff;
     border-bottom: 1px solid #69d2ff;
@@ -346,9 +383,7 @@ a.medium {
 .input, #counter {
     color: #fff;
     background: none;
-    font-family: "Helvetica Neue", "Helvetica", "Arial", sans-serif;
     font-size: 1.5rem;
-    font-weight: 300;
 }
 
 .input {
@@ -357,10 +392,13 @@ a.medium {
     margin-left: 171px;
     padding: 0 100px 0 0;
     border: none;
+    font-weight: 300;
     outline: none;
     height: 50px;
-    line-height: 1;
+    line-height: 50px;
     resize: none;
+    white-space: nowrap;
+    overflow: hidden;
     position: absolute;
     bottom: 0;
     left: 0;
@@ -373,18 +411,14 @@ a.medium {
     float:right;
 }
 
-input::-webkit-input-placeholder {
+.input::-webkit-input-placeholder {
     color: #fff;
 }
 
 .input:focus { color: #fff; }
 
 #chat-container {
-    float: left;
-    position: relative;
-    width: 100%;
-    margin-top: 51px;
-    padding-bottom: 99px;
+    padding: 51px 0 119px;
 }
 
 #chat-container.lean {
@@ -393,8 +427,6 @@ input::-webkit-input-placeholder {
 
 #chat-container li {
     background-color: rgba(255, 255, 255, 0.85);
-    clear: both;
-    float: left;
     min-height: 102px;
     width: 100%;
     overflow: hidden;
@@ -432,19 +464,16 @@ input::-webkit-input-placeholder {
     min-width: 182px;
     overflow: hidden;
     padding: 14px 70px 18px 171px;
-    font-weight: 300;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 #chat-container li .mute, #chat-container li .ban {
-    font-family: "Helvetica Neue", "Helvetica", "Arial", sans-serif;
     background: none;
     border: 0;
     color: #69d2ff;
     display: block;
     font-size: 0.7rem;
-    font-weight: 300;
     margin: 0;
     padding: 8px 18px 9px;
     position: absolute;
@@ -464,12 +493,10 @@ input::-webkit-input-placeholder {
 }
 
 #chat-container li .timestamp {
-    font-family: "Helvetica Neue", "Helvetica", "Arial", sans-serif;
     border: 0;
     color: #666;
     display: block;
     font-size: 0.8rem;
-    font-weight: 300;
     position: absolute;
     right: 0;
     top: 0;
@@ -509,9 +536,7 @@ ul li.on {
 #composer-blocker {
     color: rgba(255, 255, 255, .67);
     background-color: #999;
-    font-family: "Helvetica Neue", "Helvetica", "Arial", sans-serif;
     font-size: 1.5rem;
-    font-weight: 300;
     width: 100%;
     padding: 10px 18px 14px 171px;
     height: 27px;
@@ -588,6 +613,12 @@ ul li.on {
     .input {
         width: 65%;
     }
+    #browser-warning {
+      left: 5%;
+      right: 5%;
+      min-width: 0px;
+      bottom: 10px;
+    }
 }
 
 @media only screen and (max-width: 655px) {
@@ -635,7 +666,6 @@ ul li.on {
     #composer-blocker {
         left: -18px;
     }
-
 }
 
 @media only screen and (max-width: 460px) {

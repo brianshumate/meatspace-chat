@@ -4,7 +4,7 @@ block content
   div#videoHolder
   form(method='post', id='composer-form')
     .message-content
-      input(name='message', id='composer-message', class='input', maxlength='250', autocomplete='off', placeholder=t('messagePrompt'))
+      textarea(name='message', id='composer-message', class='input', maxlength='250', autocomplete='off', placeholder=t('messagePrompt'))
       input(type='hidden', name='_csrf', value='#{csrf}')
       #composer-blocker.hidden
         span= t('pleaseWait')
@@ -18,3 +18,13 @@ block terms
     p
       a(href='javascript:;', class='agree', id='tnc-accept')= t('iAccept')
       a(href='http://www.nyan.cat', class='agree')= t('iDoNotAccept')
+
+block browserWarning
+  #browser-warning
+    p= t('browserWarningString')
+    p.subtext= t('browserWarningSubtext')
+    p
+      a(href='http://www.mozilla.org/en-US/firefox/new/', class='browser firefox')= ''
+      a(href='https://www.google.com/intl/en/chrome/browser/', class='browser chrome')= ''
+    p
+      a(href='javascript:;', id='browser-warning-accept')= t('okay')

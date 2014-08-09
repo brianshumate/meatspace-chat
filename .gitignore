@@ -11,3 +11,4 @@ blacklist.json
 logger
 public/javascripts/lib
 npm-debug.log
+public/stylesheets/main.css

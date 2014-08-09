@@ -12,7 +12,6 @@ define(['jquery', './base/transform', 'gumhelper', './base/videoShooter', 'finge
   var CHAR_LIMIT = 250;
 
   var auth = {
-    userid: null,
     fingerprint: new Fingerprint({ canvas: true }).get(),
     admin: false
   };
@@ -24,7 +23,7 @@ define(['jquery', './base/transform', 'gumhelper', './base/videoShooter', 'finge
     blocker: $('#composer-blocker'),
     form: $('#composer-form'),
     message: $('#composer-message'),
-    inputs: $('#composer-form input').toArray(),
+    inputs: $('#composer-form input, #composer-message').toArray(),
     videoHolder: $('#videoHolder')
   };
   var menu = {
@@ -37,6 +36,7 @@ define(['jquery', './base/transform', 'gumhelper', './base/videoShooter', 'finge
   var footer = $('#footer');
   var svg = $(null);
   var terms = $('#terms');
+  var browserWarning = $('#browser-warning');
   var isPosting = false;
   var canSend = true;
   var muteText = body.data('mute');
@@ -53,6 +53,13 @@ define(['jquery', './base/transform', 'gumhelper', './base/videoShooter', 'finge
   var unreadMessages = 0;
   var pageHidden = 'hidden';
   var pageVisibilityChange = 'visibilitychange';
+  var localFingerprints = JSON.parse(localStorage.getItem('localFingerprints')) || [];
+
+  window.addEventListener('storage', function () {
+    // in case someone has two tabs open, if they modify localStorage from another window, reload it
+    mutes = JSON.parse(localStorage.getItem('muted')) || [];
+    localFingerprints = JSON.parse(localStorage.getItem('localFingerprints')) || [];
+  });
 
   if (typeof document.hidden === 'undefined') {
     ['webkit', 'moz', 'ms'].some(function (prefix) {
@@ -79,9 +86,23 @@ define(['jquery', './base/transform', 'gumhelper', './base/videoShooter', 'finge
     }
   };
 
+  var isLocalFingerprint = function (fingerprint) {
+    return localFingerprints.indexOf(fingerprint) > -1;
+  };
+
+  var addLocalFingerprint = function (fingerprint) {
+    if (isLocalFingerprint(fingerprint)) {
+      return;
+    }
+
+    localFingerprints.unshift(fingerprint);
+    localFingerprints = localFingerprints.slice(0, 20);
+    localStorage.setItem('localFingerprints', JSON.stringify(localFingerprints));
+  };
+
   var isMuted = function (fingerprint, incoming) {
     var mutedItem = mutes.indexOf(fingerprint) !== -1;
-    var bannedItem = incoming.value.banned && auth.userid !== fingerprint;
+    var bannedItem = incoming && incoming.value.banned && !isLocalFingerprint(fingerprint);
 
     return !!(mutedItem || bannedItem);
   };
@@ -133,7 +154,7 @@ define(['jquery', './base/transform', 'gumhelper', './base/videoShooter', 'finge
           li.appendChild(img);
 
           // This is likely your own fingerprint so you don't mute yourself. Unless you're weird.
-          if (auth.userid !== fingerprint) {
+          if (!isLocalFingerprint(fingerprint)) {
             updateNotificationCount();
 
             var button = document.createElement('button');
@@ -239,7 +260,6 @@ define(['jquery', './base/transform', 'gumhelper', './base/videoShooter', 'finge
   };
 
   $.get('/ip?t=' + Date.now(), function (data) {
-    auth.userid = md5(auth.fingerprint + data.ip);
     auth.admin = data.admin;
   });
 
@@ -307,7 +327,7 @@ define(['jquery', './base/transform', 'gumhelper', './base/videoShooter', 'finge
     );
   };
 
-  body.on('click', '#unmute, #tnc-accept', function (ev) {
+  body.on('click', '#unmute, #tnc-accept, #browser-warning-accept, #switch-camera', function (ev) {
     if (ev.target.id === 'unmute') {
       debug('clearing mutes');
       localStorage.removeItem('muted');
@@ -318,6 +338,21 @@ define(['jquery', './base/transform', 'gumhelper', './base/videoShooter', 'finge
       debug('accepting terms');
       localStorage.setItem('terms', true);
       terms.removeClass('on');
+      if (navigator.getMedia === undefined) {
+        browserWarning.addClass('on');
+      }
+    }
+
+    if (ev.target.id === 'browser-warning-accept') {
+      debug('acknowledging lack of rtc');
+      browserWarning.removeClass('on');
+    }
+
+    if (ev.target.id === 'switch-camera') {
+      debug('switching camera');
+      gumHelper.stopVideoStreaming();
+      composer.videoHolder.empty();
+      startStreaming();
     }
   }).on('keydown', function (ev) {
     if (isFocusingKey(ev) && ev.target !== composer.message[0]) {
@@ -329,7 +364,7 @@ define(['jquery', './base/transform', 'gumhelper', './base/videoShooter', 'finge
     var fingerprint = $(this).parent('[data-fingerprint]').data('fingerprint');
     var messages;
 
-    if (!isMuted(fingerprint)) {
+    if (!isMuted(fingerprint, false)) {
       debug('Muting %s', fingerprint);
       mutes.push(fingerprint);
       localStorage.setItem('muted', JSON.stringify(mutes));
@@ -349,6 +384,13 @@ define(['jquery', './base/transform', 'gumhelper', './base/videoShooter', 'finge
       fingerprint: $(this).parent().data('fingerprint'),
       _csrf: composer.form.find('input[name="_csrf"]').val()
     });
+  });
+
+  composer.message.on('keypress', function (ev) {
+    if (ev.which === 13 /* enter */) {
+      composer.form.submit();
+      return false;
+    }
   });
 
   composer.form.on('keyup', function (ev) {
@@ -382,6 +424,8 @@ define(['jquery', './base/transform', 'gumhelper', './base/videoShooter', 'finge
             return (data[input.name] = input.value, data);
           }, { picture: picture });
 
+          submission.message = submission.message.replace(/[\n\r\t]/g, '');
+
           svg.attr('class', 'progress');
 
           debug('Sending chat');
@@ -389,8 +433,16 @@ define(['jquery', './base/transform', 'gumhelper', './base/videoShooter', 'finge
             if (window.ga) {
               window.ga('send', 'event', 'message', 'send');
             }
-          }).error(function (data) {
-            alert(data.responseJSON.error);
+          }).done(function (data) {
+            if (data.fingerprint) {
+              addLocalFingerprint(data.fingerprint);
+            }
+          }).fail(function (data) {
+            if (data.responseJSON && data.responseJSON.error) {
+              alert(data.responseJSON.error);
+            } else {
+              alert('error, try again later...');
+            }
           }).always(function (data) {
             composer.message.prop('readonly', false);
             composer.message.val('');
